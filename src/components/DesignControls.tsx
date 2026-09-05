@@ -7,42 +7,53 @@ import type {
   Gradient,
 } from "@/domain/design.ts";
 import { MAX_LOGO_SIZE, resolveCorners, resolveErrorCorrection } from "@/domain/design.ts";
-import { PRESETS } from "@/domain/presets.ts";
+import { PRESETS, type PresetId } from "@/domain/presets.ts";
+import type { MessageKey } from "@/messages/en.ts";
+import { msg } from "@/messages/index.ts";
 import { fileToDataUri } from "@/lib/download.ts";
 import { Button, ColorInput, Disclosure, Field, Panel, Select, Slider, Toggle } from "./ui.tsx";
 import { useEffect, useRef, useState } from "react";
 
 const DOT_STYLES: { value: DotStyle; label: string }[] = [
-  { value: "square", label: "Square" },
-  { value: "dots", label: "Dots" },
-  { value: "rounded", label: "Rounded" },
-  { value: "extra-rounded", label: "Extra rounded" },
-  { value: "classy", label: "Classy" },
-  { value: "classy-rounded", label: "Classy rounded" },
+  { value: "square", label: msg("dot.square") },
+  { value: "dots", label: msg("dot.dots") },
+  { value: "rounded", label: msg("dot.rounded") },
+  { value: "extra-rounded", label: msg("dot.extra-rounded") },
+  { value: "classy", label: msg("dot.classy") },
+  { value: "classy-rounded", label: msg("dot.classy-rounded") },
 ];
 
 const CORNER_SQUARE_STYLES: { value: CornerSquareStyle; label: string }[] = [
-  { value: "square", label: "Square" },
-  { value: "dot", label: "Dot" },
-  { value: "extra-rounded", label: "Extra rounded" },
+  { value: "square", label: msg("corners.style.square") },
+  { value: "dot", label: msg("corners.style.dot") },
+  { value: "extra-rounded", label: msg("corners.style.extra-rounded") },
 ];
 
 const CORNER_DOT_STYLES: { value: CornerDotStyle; label: string }[] = [
-  { value: "square", label: "Square" },
-  { value: "dot", label: "Dot" },
+  { value: "square", label: msg("corners.style.square") },
+  { value: "dot", label: msg("corners.style.dot") },
 ];
 
 const EC_LEVELS: { value: ErrorCorrectionLevel; label: string }[] = [
-  { value: "L", label: "L — 7% recovery" },
-  { value: "M", label: "M — 15% recovery" },
-  { value: "Q", label: "Q — 25% recovery" },
-  { value: "H", label: "H — 30% recovery" },
+  { value: "L", label: msg("ec.L") },
+  { value: "M", label: msg("ec.M") },
+  { value: "Q", label: msg("ec.Q") },
+  { value: "H", label: msg("ec.H") },
 ];
 
 const GRADIENT_TYPES: { value: Gradient["type"]; label: string }[] = [
-  { value: "linear", label: "Linear" },
-  { value: "radial", label: "Radial" },
+  { value: "linear", label: msg("gradient.type.linear") },
+  { value: "radial", label: msg("gradient.type.radial") },
 ];
+
+/** Naming a Preset is copy, so it lives here rather than in the domain. */
+const PRESET_NAMES: Record<PresetId, MessageKey> = {
+  classic: "preset.classic",
+  rounded: "preset.rounded",
+  dots: "preset.dots",
+  classy: "preset.classy",
+  punch: "preset.punch",
+};
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
@@ -76,11 +87,11 @@ export const DesignControls = ({
   const acceptLogo = async (file: File | null | undefined) => {
     if (!file) return;
     if (!/^image\/(png|jpeg|svg\+xml|webp)$/.test(file.type)) {
-      setLogoError("Use a PNG, JPEG, SVG or WebP image.");
+      setLogoError(msg("logo.error.type"));
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
-      setLogoError("That image is over 2 MB. Try a smaller one.");
+      setLogoError(msg("logo.error.size"));
       return;
     }
 
@@ -91,42 +102,42 @@ export const DesignControls = ({
         logo: { dataUri, size: logo?.size ?? 0.2, hideBackgroundDots: true, margin: 4 },
       });
     } catch {
-      setLogoError("Could not read that file.");
+      setLogoError(msg("logo.error.read"));
     }
   };
 
   return (
     <>
-      <Panel title="Presets" hint="A starting point. Editing afterwards won't change the preset.">
+      <Panel title={msg("preset.title")} hint={msg("preset.hint")}>
         <div className="flex flex-wrap gap-2">
           {PRESETS.map((preset) => (
             <Button key={preset.id} onClick={() => onApplyPreset({ ...preset.design, logo: design.logo })}>
-              {preset.name}
+              {msg(PRESET_NAMES[preset.id])}
             </Button>
           ))}
         </div>
       </Panel>
 
-      <Panel title="Style">
-        <Field label="Dot style">
+      <Panel title={msg("style.title")}>
+        <Field label={msg("style.dotStyle.label")}>
           <Select value={design.dotStyle} onChange={(dotStyle) => onChange({ dotStyle })} options={DOT_STYLES} />
         </Field>
 
-        <Field label="Foreground">
+        <Field label={msg("style.foreground.label")}>
           <ColorInput value={design.foreground} onChange={(foreground) => onChange({ foreground })} />
         </Field>
 
-        <Field label="Background">
+        <Field label={msg("style.background.label")}>
           <ColorInput value={design.background} onChange={(background) => onChange({ background })} />
         </Field>
 
         <Toggle
           checked={design.transparentBackground}
           onChange={(transparentBackground) => onChange({ transparentBackground })}
-          label="Transparent background"
+          label={msg("style.transparent.label")}
         />
 
-        <Field label="Quiet zone">
+        <Field label={msg("style.margin.label")}>
           <Slider
             value={design.margin}
             min={0}
@@ -138,7 +149,7 @@ export const DesignControls = ({
         </Field>
       </Panel>
 
-      <Panel title="Corners">
+      <Panel title={msg("corners.title")}>
         <Toggle
           checked={!design.corners.linked}
           onChange={(unlinked) =>
@@ -148,12 +159,12 @@ export const DesignControls = ({
                 : { linked: true },
             })
           }
-          label="Style corners separately"
+          label={msg("corners.unlink.label")}
         />
 
         {!design.corners.linked && (
           <div className="space-y-3">
-            <Field label="Corner frame">
+            <Field label={msg("corners.square.label")}>
               <Select
                 value={design.corners.squareStyle}
                 onChange={(squareStyle) =>
@@ -162,7 +173,7 @@ export const DesignControls = ({
                 options={CORNER_SQUARE_STYLES}
               />
             </Field>
-            <Field label="Corner frame colour">
+            <Field label={msg("corners.squareColor.label")}>
               <ColorInput
                 value={design.corners.squareColor}
                 onChange={(squareColor) =>
@@ -170,14 +181,14 @@ export const DesignControls = ({
                 }
               />
             </Field>
-            <Field label="Corner centre">
+            <Field label={msg("corners.dot.label")}>
               <Select
                 value={design.corners.dotStyle}
                 onChange={(dotStyle) => onChange({ corners: { ...corners, linked: false, dotStyle } })}
                 options={CORNER_DOT_STYLES}
               />
             </Field>
-            <Field label="Corner centre colour">
+            <Field label={msg("corners.dotColor.label")}>
               <ColorInput
                 value={design.corners.dotColor}
                 onChange={(dotColor) => onChange({ corners: { ...corners, linked: false, dotColor } })}
@@ -187,7 +198,7 @@ export const DesignControls = ({
         )}
       </Panel>
 
-      <Panel title="Logo" hint="Read from your machine only — nothing is uploaded.">
+      <Panel title={msg("logo.title")} hint={msg("logo.hint")}>
         <input
           ref={fileRef}
           type="file"
@@ -212,20 +223,23 @@ export const DesignControls = ({
             <div className="flex h-10 w-10 items-center justify-center rounded bg-canvas text-base">＋</div>
           )}
           <div className="flex-1">
-            Drop or paste an image here, or{" "}
+            {msg("logo.drop")}{" "}
             <button type="button" className="font-medium text-accent underline" onClick={() => fileRef.current?.click()}>
-              choose a file
+              {msg("logo.choose")}
             </button>
             .
           </div>
-          {logo && <Button onClick={() => onChange({ logo: null })}>Remove</Button>}
+          {logo && <Button onClick={() => onChange({ logo: null })}>{msg("logo.remove")}</Button>}
         </div>
 
         {logoError && <p className="text-xs text-red-600">{logoError}</p>}
 
         {logo && (
           <>
-            <Field label="Logo size" hint={`Capped at ${MAX_LOGO_SIZE * 100}% so the code still scans.`}>
+            <Field
+              label={msg("logo.size.label")}
+              hint={msg("logo.size.hint", { percent: MAX_LOGO_SIZE * 100 })}
+            >
               <Slider
                 value={logo.size}
                 min={0.05}
@@ -235,7 +249,7 @@ export const DesignControls = ({
                 format={(v) => `${Math.round(v * 100)}%`}
               />
             </Field>
-            <Field label="Logo padding">
+            <Field label={msg("logo.padding.label")}>
               <Slider
                 value={logo.margin}
                 min={0}
@@ -248,13 +262,13 @@ export const DesignControls = ({
             <Toggle
               checked={logo.hideBackgroundDots}
               onChange={(hideBackgroundDots) => onChange({ logo: { ...logo, hideBackgroundDots } })}
-              label="Clear dots behind the logo"
+              label={msg("logo.hideDots.label")}
             />
           </>
         )}
       </Panel>
 
-      <Disclosure label="Gradient">
+      <Disclosure label={msg("gradient.title")}>
         <Toggle
           checked={gradient !== null}
           onChange={(on) =>
@@ -264,32 +278,32 @@ export const DesignControls = ({
                 : null,
             })
           }
-          label="Use a gradient instead of a flat colour"
+          label={msg("gradient.enable.label")}
         />
 
         {gradient && (
           <div className="space-y-3">
-            <Field label="Gradient type">
+            <Field label={msg("gradient.type.label")}>
               <Select
                 value={gradient.type}
                 onChange={(type) => onChange({ gradient: { ...gradient, type } })}
                 options={GRADIENT_TYPES}
               />
             </Field>
-            <Field label="From">
+            <Field label={msg("gradient.from.label")}>
               <ColorInput
                 value={gradient.from}
                 onChange={(from) => onChange({ gradient: { ...gradient, from } })}
               />
             </Field>
-            <Field label="To">
+            <Field label={msg("gradient.to.label")}>
               <ColorInput
                 value={gradient.to}
                 onChange={(to) => onChange({ gradient: { ...gradient, to } })}
               />
             </Field>
             {gradient.type === "linear" && (
-              <Field label="Angle">
+              <Field label={msg("gradient.angle.label")}>
                 <Slider
                   value={gradient.rotation}
                   min={0}
@@ -301,19 +315,19 @@ export const DesignControls = ({
               </Field>
             )}
             <p className="text-xs text-muted">
-              Contrast is judged against the first colour, so keep that end dark.
+              {msg("gradient.note")}
             </p>
           </div>
         )}
       </Disclosure>
 
-      <Disclosure label="Advanced">
+      <Disclosure label={msg("advanced.title")}>
         <Field
-          label="Error correction"
+          label={msg("ec.label")}
           hint={
             design.logo
-              ? "Held at H while a logo is present — the logo covers modules that recovery data replaces."
-              : "Higher recovery survives damage but makes a denser code."
+              ? msg("ec.hint.enforced")
+              : msg("ec.hint.free")
           }
         >
           <Select

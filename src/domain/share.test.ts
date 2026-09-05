@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_CAPTION, type Caption } from "./caption.ts";
 import { DEFAULT_DESIGN, type Design } from "./design.ts";
 import { decodeShare, encodeShare, shareOmitsLogo } from "./share.ts";
 
 const payload = { kind: "url", value: "example.com" } as const;
+const caption = DEFAULT_CAPTION;
 
 describe("share codec", () => {
   it("round-trips a design", () => {
     const design: Design = { ...DEFAULT_DESIGN, dotStyle: "classy", foreground: "#ff0000" };
-    expect(decodeShare(encodeShare({ payload, design }))).toEqual({ payload, design });
+    expect(decodeShare(encodeShare({ payload, design, caption }))).toEqual({ payload, design, caption });
   });
 
   it("survives non-ascii payloads", () => {
-    const original = { payload: { kind: "text", value: "héllo 🌍" } as const, design: DEFAULT_DESIGN };
+    const original = { payload: { kind: "text", value: "héllo 🌍" } as const, design: DEFAULT_DESIGN, caption };
     expect(decodeShare(encodeShare(original))).toEqual(original);
   });
 
@@ -20,13 +22,13 @@ describe("share codec", () => {
       ...DEFAULT_DESIGN,
       logo: { dataUri: "data:image/png;base64,AAAA", size: 0.2, hideBackgroundDots: true, margin: 4 },
     };
-    const encoded = encodeShare({ payload, design });
+    const encoded = encodeShare({ payload, design, caption });
     expect(encoded).not.toContain("AAAA");
     expect(decodeShare(encoded)?.design.logo).toBe(null);
   });
 
   it("produces url-safe output", () => {
-    const encoded = encodeShare({ payload: { kind: "text", value: "??>>//++" }, design: DEFAULT_DESIGN });
+    const encoded = encodeShare({ payload: { kind: "text", value: "??>>//++" }, design: DEFAULT_DESIGN, caption });
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
@@ -114,5 +116,31 @@ describe("decodeShare against untrusted input", () => {
 
   it("treats a non-object corners value as linked", () => {
     expect(decodeShare(craft({ corners: "linked" }))?.design.corners).toEqual({ linked: true });
+  });
+});
+
+describe("share codec: captions", () => {
+  const carried: Caption = { text: "Zażółć gęślą jaźń", color: "#ff0000", size: "large" };
+
+  it("carries a caption, unlike a logo", () => {
+    const decoded = decodeShare(encodeShare({ payload, design: DEFAULT_DESIGN, caption: carried }));
+    expect(decoded?.caption).toEqual(carried);
+  });
+
+  it("clamps a caption smuggled in from someone else's URL bar", () => {
+    const encoded = encodeShare({
+      payload,
+      design: DEFAULT_DESIGN,
+      caption: { text: "x".repeat(200), color: "javascript:alert(1)", size: "huge" as Caption["size"] },
+    });
+    const decoded = decodeShare(encoded);
+    expect(decoded?.caption.text).toHaveLength(60);
+    expect(decoded?.caption.color).toBe(DEFAULT_CAPTION.color);
+    expect(decoded?.caption.size).toBe(DEFAULT_CAPTION.size);
+  });
+
+  it("opens a link made before captions existed", () => {
+    const legacy = encodeShare({ payload, design: DEFAULT_DESIGN, caption: DEFAULT_CAPTION });
+    expect(decodeShare(legacy)?.caption).toEqual(DEFAULT_CAPTION);
   });
 });

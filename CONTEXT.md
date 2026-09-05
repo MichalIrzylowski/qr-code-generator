@@ -21,15 +21,49 @@ _Avoid_: config, settings, options, style
 
 **Preset**:
 A named, ready-made Design shipped with the app, used as a starting point. Selecting one replaces
-the visual choices but keeps the current Logo Overlay, which the user supplied and a Preset has no
-opinion about; editing afterwards does not modify the Preset.
+the visual choices and nothing else: a Preset has no opinion about anything the user supplied, which
+today means it leaves both the Logo Overlay and the Caption untouched. Editing afterwards does not
+modify the Preset.
 _Avoid_: template, theme
+
+**Caption**:
+Optional human-readable text placed beneath the code. It is neither Payload nor Design: a scanner
+never reads it and a human always does, so it is the only part of the artefact that carries meaning
+outside the code. A Caption is capped in length, wrapped to at most two lines at the code's width and
+ellipsised beyond that, so the artefact's shape never depends on how much was typed. Its glyphs are
+emitted as vector paths rather than SVG text (ADR-0003). A blank Caption is not an empty band but no
+band at all, and the export stays byte-identical to one made before Captions existed.
+_Avoid_: label, title, subtitle, alt text
+
+**Artefact**:
+The composed thing a user actually receives: the code, plus the Caption beneath it when there is one.
+Square without a Caption and taller than it is wide with one, never wider — the export size selector
+always names the *code's* width, so adding a Caption can never shrink the thing being scanned. One
+Artefact feeds the preview, every Export Target and the Scannability Check alike.
+_Avoid_: output, image, canvas
 
 **Logo Overlay**:
 A user-supplied image placed at the centre of a QR code, always sourced from the local machine
 (file pick or clipboard paste) and held as a data URI. Its presence forces the error correction
 level upward and caps its own size.
 _Avoid_: image, icon, watermark, branding
+
+### Speaking the user's language
+
+**Locale**:
+The language the UI is written in — English or Polish today. A Locale is a property of the *viewer*,
+not of a Design: it is detected from the browser once at startup and never becomes state, so there is
+no switcher, nothing persisted, and a share link carries no language. Opening someone else's link
+shows the copy you read, not the copy they wrote it in. A `?lang=` query parameter overrides
+detection, undocumented in the UI and there only so the Polish copy can be reviewed.
+_Avoid_: language setting, i18n, translation
+
+**Message**:
+One piece of UI copy, addressed by a flat dotted key. English is the source of truth for which keys
+exist, so a missing Polish string fails the typecheck rather than surfacing as a blank label. Values
+are substituted into `{name}` placeholders; there are deliberately no plural rules, so a string
+needing them is phrased around instead ("Characters: 120") until a second case earns the machinery.
+_Avoid_: string, label, copy, translation
 
 ### Producing output
 
@@ -49,7 +83,9 @@ _Avoid_: file type, format
 **Scannability Check**:
 An automatic verification that the rendered Design can actually be decoded, performed by scanning
 the generated image back with a decoder and reporting a pass or fail. It is a measurement, not an
-estimate.
+estimate. The Artefact is rendered whole and the code's square is what gets decoded: a Caption never
+reaches the quiet zone, so it cannot affect decoding, but its pixels do defeat `jsQR`'s locator and
+would otherwise fail codes that scan.
 _Avoid_: validation, preview check, quality score
 
 **Scannability Hint**:

@@ -1,3 +1,4 @@
+import type { MessageFor } from "@/messages/catalogue.ts";
 import type { Design } from "./design.ts";
 import { effectiveForeground } from "./design.ts";
 
@@ -85,13 +86,14 @@ export const collectHints = (design: Design, encoded: string): ScannabilityHint[
   return hints;
 };
 
-export const describeHint = (hint: ScannabilityHint): string => {
+/** The Hint as prose. Message lookup is injected so the domain stays language-free. */
+export const describeHint = (hint: ScannabilityHint, msg: MessageFor): string => {
   switch (hint.code) {
     case "low-contrast":
-      return `Contrast between the code and its background is only ${hint.ratio.toFixed(1)}:1. Aim for at least ${MIN_CONTRAST_RATIO}:1.`;
+      return msg("hint.low-contrast", { ratio: hint.ratio.toFixed(1), min: MIN_CONTRAST_RATIO });
     case "inverted":
-      return "The code is lighter than its background. Many scanners assume dark-on-light and will refuse to read this.";
+      return msg("hint.inverted");
     case "long-payload":
-      return `${hint.length} characters makes for a dense code that needs a steady hand and a good camera.`;
+      return msg("hint.long-payload", { length: hint.length });
   }
 };
