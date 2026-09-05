@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { DEFAULT_CAPTION, type Caption } from "@/domain/caption.ts";
 import { DEFAULT_DESIGN, type Design, type QrDesign } from "@/domain/design.ts";
 import type { Payload } from "@/domain/payload.ts";
 import { SHARE_PARAM, decodeShare } from "@/domain/share.ts";
@@ -8,6 +9,7 @@ const STORAGE_KEY = "qr-code-generator:design";
 const DEFAULT_STATE: QrDesign = {
   payload: { kind: "url", value: "https://example.com" },
   design: DEFAULT_DESIGN,
+  caption: DEFAULT_CAPTION,
 };
 
 /**
@@ -28,6 +30,7 @@ const loadInitial = (): QrDesign => {
     return {
       payload: parsed.payload ?? DEFAULT_STATE.payload,
       design: { ...DEFAULT_DESIGN, ...parsed.design },
+      caption: { ...DEFAULT_CAPTION, ...parsed.caption },
     };
   } catch {
     return DEFAULT_STATE;
@@ -54,9 +57,15 @@ export const useQrDesign = () => {
     setState((current) => ({ ...current, design: { ...current.design, ...patch } }));
   }, []);
 
+  const updateCaption = useCallback((patch: Partial<Caption>) => {
+    setState((current) => ({ ...current, caption: { ...current.caption, ...patch } }));
+  }, []);
+
+  // A Preset replaces the Design and nothing else. It has no opinion about
+  // anything the user supplied — neither the Logo Overlay nor the Caption.
   const applyDesign = useCallback((design: Design) => {
     setState((current) => ({ ...current, design }));
   }, []);
 
-  return { ...state, setPayload, updateDesign, applyDesign };
+  return { ...state, setPayload, updateDesign, updateCaption, applyDesign };
 };

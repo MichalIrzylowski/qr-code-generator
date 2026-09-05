@@ -1,3 +1,4 @@
+import type { Caption } from "./caption.ts";
 import type { Payload } from "./payload.ts";
 
 export type DotStyle =
@@ -124,4 +125,10 @@ export const resolveCorners = (
   };
 };
 
-export type QrDesign = { payload: Payload; design: Design };
+/**
+ * Everything that makes up one artefact. A Caption sits beside the Design
+ * rather than inside it: a Design is the set of *visual* choices applied to a
+ * Payload, and a Caption is neither encoded nor purely visual — it is text
+ * meant for a human, which is why it gets its own place here.
+ */
+export type QrDesign = { payload: Payload; design: Design; caption: Caption };

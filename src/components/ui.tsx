@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { msg } from "@/messages/index.ts";
 
 export const Panel = ({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) => (
   <section className="rounded-xl border border-line bg-surface p-4 shadow-sm">
@@ -50,7 +51,7 @@ export const ColorInput = ({ value, onChange }: { value: string; onChange: (valu
   <div className="flex items-center gap-2">
     <input
       type="color"
-      aria-label="Colour picker"
+      aria-label={msg("a11y.colorPicker")}
       className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-line bg-surface p-1"
       value={value}
       onChange={(e) => onChange(e.target.value)}

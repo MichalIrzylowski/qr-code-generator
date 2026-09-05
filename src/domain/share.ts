@@ -1,3 +1,5 @@
+import { CAPTION_SIZES, DEFAULT_CAPTION, clampCaptionText, resolveCaption } from "./caption.ts";
+import type { Caption, CaptionSize } from "./caption.ts";
 import { DEFAULT_DESIGN } from "./design.ts";
 import type {
   CornerDotStyle,
@@ -32,8 +34,10 @@ const fromBase64Url = (encoded: string): string => {
 /** True when sharing this design will silently lose something. */
 export const shareOmitsLogo = (design: Design): boolean => design.logo !== null;
 
-export const encodeShare = ({ payload, design }: QrDesign): string =>
-  toBase64Url(JSON.stringify({ p: payload, d: { ...design, logo: null } }));
+export const encodeShare = ({ payload, design, caption }: QrDesign): string =>
+  toBase64Url(
+    JSON.stringify({ p: payload, d: { ...design, logo: null }, c: resolveCaption(caption) }),
+  );
 
 const DOT_STYLES = new Set<DotStyle>([
   "square",
@@ -47,6 +51,7 @@ const CORNER_SQUARE_STYLES = new Set<CornerSquareStyle>(["square", "dot", "extra
 const CORNER_DOT_STYLES = new Set<CornerDotStyle>(["square", "dot"]);
 const EC_LEVELS = new Set<ErrorCorrectionLevel>(["L", "M", "Q", "H"]);
 const HEX = /^#[0-9a-f]{6}$/i;
+const CAPTION_SIZE_SET = new Set<CaptionSize>(CAPTION_SIZES);
 
 const asMember = <T extends string>(value: unknown, allowed: Set<T>, fallback: T): T =>
   typeof value === "string" && allowed.has(value as T) ? (value as T) : fallback;
@@ -61,6 +66,21 @@ const asNumber = (value: unknown, fallback: number, min: number, max: number): n
   typeof value === "number" && Number.isFinite(value)
     ? Math.min(Math.max(value, min), max)
     : fallback;
+
+/**
+ * Unlike a Logo Overlay, a Caption is small enough to ride in a link — capped at
+ * a handful of characters, it costs a few bytes of base64.
+ */
+const decodeCaption = (raw: unknown): Caption => {
+  if (typeof raw !== "object" || raw === null) return DEFAULT_CAPTION;
+
+  const caption = raw as Record<string, unknown>;
+  return {
+    text: typeof caption.text === "string" ? clampCaptionText(caption.text) : "",
+    color: asHex(caption.color, DEFAULT_CAPTION.color),
+    size: asMember(caption.size, CAPTION_SIZE_SET, DEFAULT_CAPTION.size),
+  };
+};
 
 const GRADIENT_TYPES = new Set<Gradient["type"]>(["linear", "radial"]);
 
@@ -108,7 +128,7 @@ export const decodeShare = (encoded: string): QrDesign | null => {
     const raw: unknown = JSON.parse(fromBase64Url(encoded));
     if (typeof raw !== "object" || raw === null) return null;
 
-    const { p, d } = raw as { p?: unknown; d?: unknown };
+    const { p, d, c } = raw as { p?: unknown; d?: unknown; c?: unknown };
     if (typeof p !== "object" || p === null) return null;
 
     const { kind, value } = p as { kind?: unknown; value?: unknown };
@@ -137,7 +157,7 @@ export const decodeShare = (encoded: string): QrDesign | null => {
           : null,
     };
 
-    return { payload: { kind, value }, design };
+    return { payload: { kind, value }, design, caption: decodeCaption(c) };
   } catch {
     return null;
   }
