@@ -17,6 +17,34 @@ const toGradient = (gradient: Gradient) => ({
 });
 
 /**
+ * Re-encode a payload as the bytes it should occupy in the code.
+ *
+ * `qr-code-styling` bundles its own `qrcode-generator`, whose byte-mode encoder
+ * is hard-wired to `charCodeAt(i) & 0xff` — one byte per code point, with the
+ * high bits thrown away. Every decoder, `jsQR` included, reads those bytes back
+ * as UTF-8. So anything above U+00FF was silently corrupted: `ł` (U+0142) was
+ * truncated to 0x42 and arrived as `B`, and `ą` and `ę` became invisible
+ * control bytes. There is no option to change the encoder and no shared module
+ * instance to patch, so the conversion happens here, at the boundary.
+ *
+ * The result is a string of code points below 0x100 whose truncation *is* the
+ * UTF-8 encoding of the original. Pure ASCII passes through unchanged, so
+ * ordinary links still take the compact Alphanumeric and Numeric modes that the
+ * library picks by inspecting this same string.
+ */
+export const asQrBytes = (text: string): string => {
+  const bytes = new TextEncoder().encode(text);
+
+  // Built one chunk at a time: spreading a whole payload into `fromCharCode`
+  // overflows the argument list somewhere in the tens of thousands of bytes.
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 8192) {
+    out += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  return out;
+};
+
+/**
  * Translate a Design into `qr-code-styling` options. Enforcement is applied here
  * so there is no path to the renderer that bypasses it.
  */
@@ -27,7 +55,7 @@ export const toQrOptions = (design: Design, encoded: string, size: number): Opti
     width: size,
     height: size,
     type: "svg",
-    data: encoded,
+    data: asQrBytes(encoded),
     margin: design.margin,
     image: design.logo?.dataUri,
     qrOptions: { errorCorrectionLevel: resolveErrorCorrection(design) },
