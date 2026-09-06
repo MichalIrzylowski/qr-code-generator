@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CAPTION, type Caption } from "./caption.ts";
 import { DEFAULT_DESIGN, type Design } from "./design.ts";
-import { decodeShare, encodeShare, shareOmitsLogo } from "./share.ts";
+import { EMPTY_CARD, createField } from "./contact.ts";
+import { decodeShare, encodeShare, shareOmitsLogo, shareOmitsPayload } from "./share.ts";
 
 const payload = { kind: "url", value: "example.com" } as const;
 const caption = DEFAULT_CAPTION;
@@ -142,5 +143,48 @@ describe("share codec: captions", () => {
   it("opens a link made before captions existed", () => {
     const legacy = encodeShare({ payload, design: DEFAULT_DESIGN, caption: DEFAULT_CAPTION });
     expect(decodeShare(legacy)?.caption).toEqual(DEFAULT_CAPTION);
+  });
+});
+
+describe("contact cards in share links", () => {
+  const named = {
+    ...EMPTY_CARD,
+    firstName: "Jane",
+    lastName: "Doe",
+    fields: [{ ...createField("phone", 1), value: "07700 900123" }],
+  };
+
+  it("keeps the card out of the link", () => {
+    const encoded = encodeShare({
+      payload: { kind: "contact", card: named },
+      design: DEFAULT_DESIGN,
+      caption: DEFAULT_CAPTION,
+    });
+    expect(atob(encoded.replace(/-/g, "+").replace(/_/g, "/"))).not.toContain("900123");
+  });
+
+  it("restores the design onto an empty card", () => {
+    const design = { ...DEFAULT_DESIGN, dotStyle: "dots" as const };
+    const encoded = encodeShare({
+      payload: { kind: "contact", card: named },
+      design,
+      caption: DEFAULT_CAPTION,
+    });
+    const decoded = decodeShare(encoded);
+    expect(decoded?.design.dotStyle).toBe("dots");
+    expect(decoded?.payload).toEqual({ kind: "contact", card: EMPTY_CARD });
+  });
+
+  it("cannot be made to carry a card by hand", () => {
+    const smuggled = btoa(
+      JSON.stringify({ p: { kind: "contact", card: named }, d: {}, c: DEFAULT_CAPTION }),
+    );
+    expect(decodeShare(smuggled)?.payload).toEqual({ kind: "contact", card: EMPTY_CARD });
+  });
+
+  it("admits when a link will lose the card", () => {
+    expect(shareOmitsPayload({ kind: "contact", card: named })).toBe(true);
+    expect(shareOmitsPayload({ kind: "contact", card: EMPTY_CARD })).toBe(false);
+    expect(shareOmitsPayload({ kind: "url", value: "example.com" })).toBe(false);
   });
 });

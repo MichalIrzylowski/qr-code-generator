@@ -1,6 +1,8 @@
 import { CAPTION_SIZES, DEFAULT_CAPTION, clampCaptionText, resolveCaption } from "./caption.ts";
 import type { Caption, CaptionSize } from "./caption.ts";
+import { EMPTY_CARD, isCardEmpty } from "./contact.ts";
 import { DEFAULT_DESIGN } from "./design.ts";
+import type { Payload } from "./payload.ts";
 import type {
   CornerDotStyle,
   CornerSquareStyle,
@@ -34,9 +36,26 @@ const fromBase64Url = (encoded: string): string => {
 /** True when sharing this design will silently lose something. */
 export const shareOmitsLogo = (design: Design): boolean => design.logo !== null;
 
+/**
+ * True when a link will carry the Design but not what the code encodes. Only a
+ * Contact card is withheld, and only when there is something to withhold: a
+ * person's phone number and address must not ride along in a URL that lands in
+ * browser history and chat logs (ADR-0004).
+ */
+export const shareOmitsPayload = (payload: Payload): boolean =>
+  payload.kind === "contact" && !isCardEmpty(payload.card);
+
+/** What of the Payload is safe to put in a link. */
+const shareablePayload = (payload: Payload): Payload =>
+  payload.kind === "contact" ? { kind: "contact", card: EMPTY_CARD } : payload;
+
 export const encodeShare = ({ payload, design, caption }: QrDesign): string =>
   toBase64Url(
-    JSON.stringify({ p: payload, d: { ...design, logo: null }, c: resolveCaption(caption) }),
+    JSON.stringify({
+      p: shareablePayload(payload),
+      d: { ...design, logo: null },
+      c: resolveCaption(caption),
+    }),
   );
 
 const DOT_STYLES = new Set<DotStyle>([
@@ -131,8 +150,17 @@ export const decodeShare = (encoded: string): QrDesign | null => {
     const { p, d, c } = raw as { p?: unknown; d?: unknown; c?: unknown };
     if (typeof p !== "object" || p === null) return null;
 
+    // A Contact card is never encoded into a link, so it is never read out of
+    // one either: a contact link restores the Design onto an empty card, and a
+    // hand-crafted link cannot smuggle fields past this.
     const { kind, value } = p as { kind?: unknown; value?: unknown };
-    if ((kind !== "url" && kind !== "text") || typeof value !== "string") return null;
+    const payload: Payload | null =
+      kind === "contact"
+        ? { kind: "contact", card: EMPTY_CARD }
+        : (kind === "url" || kind === "text") && typeof value === "string"
+          ? { kind, value }
+          : null;
+    if (payload === null) return null;
 
     const source = (typeof d === "object" && d !== null ? d : {}) as Record<string, unknown>;
     const foreground = asHex(source.foreground, DEFAULT_DESIGN.foreground);
@@ -157,7 +185,7 @@ export const decodeShare = (encoded: string): QrDesign | null => {
           : null,
     };
 
-    return { payload: { kind, value }, design, caption: decodeCaption(c) };
+    return { payload, design, caption: decodeCaption(c) };
   } catch {
     return null;
   }

@@ -1,8 +1,27 @@
 import type { Payload } from "./payload.ts";
 import { encodePayload } from "./payload.ts";
+import { cardDisplayName } from "./contact.ts";
 
-/** A stable, filesystem-safe basename derived from what the code encodes. */
+const slugify = (candidate: string): string =>
+  candidate
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/, "");
+
+/**
+ * A stable, filesystem-safe basename derived from what the code *means* rather
+ * than what it encodes. A Contact card's encoded form is a vCard envelope, which
+ * would slugify into `qr-begin-vcard-version-3-0-fn-…` — so each variant names
+ * its own Export.
+ */
 export const exportBasename = (payload: Payload): string => {
+  if (payload.kind === "contact") {
+    const slug = slugify(cardDisplayName(payload.card));
+    return slug === "" ? "qr-contact" : `qr-${slug}`;
+  }
+
   const encoded = encodePayload(payload);
   if (encoded === "") return "qr-code";
 
@@ -14,12 +33,6 @@ export const exportBasename = (payload: Payload): string => {
     // Not a URL; slugify the raw text instead.
   }
 
-  const slug = candidate
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48)
-    .replace(/-+$/, "");
-
+  const slug = slugify(candidate);
   return slug === "" ? "qr-code" : `qr-${slug}`;
 };

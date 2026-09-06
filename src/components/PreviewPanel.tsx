@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { QrDesign } from "@/domain/design.ts";
 import { exportBasename } from "@/domain/filename.ts";
 import { collectHints, describeHint } from "@/domain/scannability.ts";
-import { SHARE_PARAM, encodeShare, shareOmitsLogo } from "@/domain/share.ts";
+import { SHARE_PARAM, encodeShare, shareOmitsLogo, shareOmitsPayload } from "@/domain/share.ts";
 import { msg, type MessageKey } from "@/messages/index.ts";
 import type { Artefact } from "@/lib/artefact.ts";
 import {
@@ -189,6 +189,9 @@ export const PreviewPanel = ({
         </div>
 
         {shareOmitsLogo(design) && <p className="text-xs text-muted">{msg("share.omitsLogo")}</p>}
+        {shareOmitsPayload(payload) && (
+          <p className="text-xs text-muted">{msg("share.omitsPayload")}</p>
+        )}
       </div>
     </div>
   );

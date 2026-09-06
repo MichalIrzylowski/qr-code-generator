@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { encodePayload, inspectPayload } from "./payload.ts";
+import { EMPTY_CARD, createField, type ContactCard } from "./contact.ts";
+import { emptyPayload, encodePayload, inspectPayload } from "./payload.ts";
+
+const card = (over: Partial<ContactCard> = {}): ContactCard => ({ ...EMPTY_CARD, ...over });
 
 describe("encodePayload", () => {
   it("prepends https:// to a bare host", () => {
@@ -43,5 +46,39 @@ describe("inspectPayload", () => {
 
   it("never flags non-empty text as malformed", () => {
     expect(inspectPayload({ kind: "text", value: "not a url" })).toBe(null);
+  });
+});
+
+describe("contact payloads", () => {
+  it("encodes a card as a vCard envelope", () => {
+    const encoded = encodePayload({ kind: "contact", card: card({ firstName: "Jane" }) });
+    expect(encoded.startsWith("BEGIN:VCARD")).toBe(true);
+  });
+
+  it("encodes an empty card as nothing, so no code is drawn", () => {
+    expect(encodePayload({ kind: "contact", card: EMPTY_CARD })).toBe("");
+  });
+
+  it("flags an empty card", () => {
+    expect(inspectPayload({ kind: "contact", card: EMPTY_CARD })).toBe("empty");
+  });
+
+  it("flags a card with details but no name", () => {
+    const fields = [{ ...createField("phone", 1), value: "07700 900123" }];
+    expect(inspectPayload({ kind: "contact", card: card({ fields }) })).toBe("contact-no-name");
+  });
+
+  it("accepts a named card", () => {
+    expect(inspectPayload({ kind: "contact", card: card({ lastName: "Doe" }) })).toBe(null);
+  });
+});
+
+describe("emptyPayload", () => {
+  it("gives a blank value for the string kinds", () => {
+    expect(emptyPayload("url")).toEqual({ kind: "url", value: "" });
+  });
+
+  it("gives a blank card for a contact", () => {
+    expect(emptyPayload("contact")).toEqual({ kind: "contact", card: EMPTY_CARD });
   });
 });

@@ -9,9 +9,31 @@ nothing anywhere.
 ### The code itself
 
 **Payload**:
-The data a QR code encodes, as a tagged variant (`url` today; `text`, `wifi`, `vcard` later).
-The variant determines which input form is shown and how the raw encoded string is built.
+The data a QR code encodes, as a tagged variant — Link, Text and Contact card today; `wifi` and
+friends later. Which variant a code carries is the user's first and most visible choice, not a
+setting tucked away inside one. A variant owns its own answers to what it means for it to be empty,
+what an Export of it is called and whether it may travel in a share link: those answers genuinely
+differ between a public address and a person's details, rather than being one rule with exceptions.
 _Avoid_: content, value, data
+
+**Contact card**:
+The Payload variant that encodes a person: a Name plus any number of added Fields. It is always
+spoken of as a Contact card — never as vCard, which is the encoding it happens to be written in
+(ADR-0004) and a word no user should have to meet. A Contact card is structured rather than a single
+string: it is empty when the Name and every one of its Fields is blank, and a card with no Name
+still encodes,
+though most phones will refuse to save it, so the app says so as a Scannability Hint rather than
+blocking the export.
+_Avoid_: vcard, MECARD, contact, business card, person
+
+**Field**:
+One line of a Contact card — a phone number, an email address, a website, an organisation, a job
+title, an address or a note. Fields are *added*, not filled in: only the Name is present at rest,
+and everything else arrives through one gesture that also removes it. Phone, email, website and
+address are repeatable, so two numbers is the same concept as one; the rest appear once. A
+repeatable Field carries a type (Mobile, Work, Home) so that two of the same kind stay tellable
+apart in the contact the scanner saves.
+_Avoid_: row, entry, property, attribute
 
 **Design**:
 The complete set of visual choices applied to a Payload — dot style, corner styles, colours or
@@ -69,7 +91,9 @@ _Avoid_: string, label, copy, translation
 
 **Export**:
 The act of turning the current Design into a downloadable file, and the file itself. Every Export
-is produced in the browser; nothing is uploaded.
+is produced in the browser; nothing is uploaded. Its filename is derived from what the code means
+rather than what it encodes — a Link's host and path, a Contact card's Name — falling back to a
+neutral name when there is nothing to derive from.
 _Avoid_: download, render, save
 
 **Export Target**:
@@ -91,6 +115,8 @@ _Avoid_: validation, preview check, quality score
 **Scannability Hint**:
 A human-readable explanation of *why* a Scannability Check failed or is at risk — insufficient
 contrast, oversized Logo Overlay, excessive Payload length. Hints are heuristic; the Check is not.
+A Hint never gates anything: the app's standing position is that a QR code of a mistake is still a
+valid QR code, so even a Contact card with no Name encodes and exports.
 _Avoid_: warning, error
 
 **Enforcement**:

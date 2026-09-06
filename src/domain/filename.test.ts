@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EMPTY_CARD } from "./contact.ts";
 import { exportBasename } from "./filename.ts";
 
 describe("exportBasename", () => {
@@ -24,5 +25,21 @@ describe("exportBasename", () => {
     const name = exportBasename({ kind: "text", value: "a".repeat(20) + " " + "b".repeat(60) });
     expect(name.length).toBeLessThanOrEqual(51);
     expect(name.endsWith("-")).toBe(false);
+  });
+});
+
+describe("exportBasename for a contact card", () => {
+  it("uses the name", () => {
+    const card = { ...EMPTY_CARD, firstName: "Jane", lastName: "Doe" };
+    expect(exportBasename({ kind: "contact", card })).toBe("qr-jane-doe");
+  });
+
+  it("falls back when the card has no name", () => {
+    expect(exportBasename({ kind: "contact", card: EMPTY_CARD })).toBe("qr-contact");
+  });
+
+  it("never leaks the vcard envelope into the filename", () => {
+    const card = { ...EMPTY_CARD, firstName: "Jane" };
+    expect(exportBasename({ kind: "contact", card })).not.toContain("vcard");
   });
 });

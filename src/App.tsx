@@ -1,18 +1,17 @@
 import { CaptionControls } from "@/components/CaptionControls.tsx";
 import { DesignControls } from "@/components/DesignControls.tsx";
 import { PreviewPanel } from "@/components/PreviewPanel.tsx";
-import { Field, Panel, inputClass } from "@/components/ui.tsx";
+import { PayloadControls } from "@/components/PayloadControls.tsx";
 import { useArtefact } from "@/hooks/useArtefact.ts";
 import { useQrDesign } from "@/hooks/useQrDesign.ts";
 import { useQrPreview } from "@/hooks/useQrPreview.ts";
-import { encodePayload, inspectPayload } from "@/domain/payload.ts";
+import { encodePayload } from "@/domain/payload.ts";
 import { msg } from "@/messages/index.ts";
 
 export const App = () => {
   const { payload, design, caption, setPayload, updateDesign, updateCaption, applyDesign } =
     useQrDesign();
   const encoded = encodePayload(payload);
-  const issue = inspectPayload(payload);
   const { containerRef, svg, size } = useQrPreview(design, encoded);
   const { artefact, captionReady, fontFailed } = useArtefact(svg, size, design, caption);
 
@@ -25,20 +24,7 @@ export const App = () => {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <Panel title={msg("payload.title")} hint={msg("payload.hint")}>
-            <Field
-              label={msg("payload.url.label")}
-              hint={issue === "malformed-url" ? msg("payload.issue.malformed-url") : undefined}
-            >
-              <input
-                className={inputClass}
-                value={payload.value}
-                spellCheck={false}
-                placeholder={msg("payload.url.placeholder")}
-                onChange={(e) => setPayload({ kind: "url", value: e.target.value })}
-              />
-            </Field>
-          </Panel>
+          <PayloadControls payload={payload} onChange={setPayload} />
 
           <CaptionControls caption={caption} onChange={updateCaption} fontFailed={fontFailed} />
 

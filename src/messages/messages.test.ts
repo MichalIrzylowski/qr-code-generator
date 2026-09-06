@@ -13,7 +13,7 @@ describe("catalogues", () => {
       (key) => en[key as keyof typeof en] === pl[key as keyof typeof en],
     );
     // Only strings that are genuinely identical in both languages.
-    expect(shared.sort()).toEqual(["export.size", "gradient.title", "logo.title"]);
+    expect(shared.sort()).toEqual(["export.size", "gradient.title", "logo.title", "payload.kind.url"]);
   });
 });
 

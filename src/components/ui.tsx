@@ -156,3 +156,68 @@ export const Disclosure = ({ label, children }: { label: string; children: React
     <div className="mt-3 space-y-3">{children}</div>
   </details>
 );
+
+export const Tabs = <T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string }[];
+  label: string;
+}) => (
+  <div role="tablist" aria-label={label} className="flex gap-1 rounded-lg bg-canvas p-1">
+    {options.map((option) => (
+      <button
+        key={option.value}
+        type="button"
+        role="tab"
+        aria-selected={option.value === value}
+        onClick={() => onChange(option.value)}
+        className={
+          "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition " +
+          (option.value === value
+            ? "bg-surface text-ink shadow-sm"
+            : "text-muted hover:text-ink")
+        }
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
+
+/** A small square button for the destructive edge of a row. */
+export const RemoveButton = ({ onClick, label }: { onClick: () => void; label: string }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={label}
+    aria-label={label}
+    className="mt-5 h-9 w-9 shrink-0 rounded-lg border border-line text-muted transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+  >
+    ×
+  </button>
+);
+
+export const Textarea = ({
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) => (
+  <textarea
+    className={inputClass + " resize-y"}
+    rows={rows}
+    value={value}
+    placeholder={placeholder}
+    onChange={(e) => onChange(e.target.value)}
+  />
+);
